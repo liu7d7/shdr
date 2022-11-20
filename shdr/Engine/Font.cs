@@ -14,17 +14,18 @@ namespace shdr.Engine
       private static readonly __mesh _mesh;
       private static readonly __texture[] _texture;
       
-      private static readonly KeyValuePair<string, int>[] _paths = {
-         new("Resource/Font/Dank Mono Italic.otf", 18),
-         new("Resource/Font/JetBrainsMono-Regular.ttf", 20),
-         new("Resource/Font/monofur-regular.ttf", 19)
+      private static readonly List<KeyValuePair<string, int>> _paths = new()
+      {
+         new KeyValuePair<string, int>("Resource/Font/Dank Mono Italic.otf", 18),
+         new KeyValuePair<string, int>("Resource/Font/JetBrainsMono-Regular.ttf", 20),
+         new KeyValuePair<string, int>("Resource/Font/monofur-regular.ttf", 19)
       };
 
 
       private static int _index;
       public static int index
       {
-         set => _index = value % _paths.Length;
+         set => _index = value % _paths.Count;
          get => _index;
       }
 
@@ -36,12 +37,23 @@ namespace shdr.Engine
             new __shader("Resource/Shader/font.vert", "Resource/Shader/font.frag"),
             __vao.__attrib.float3, __vao.__attrib.float2, __vao.__attrib.float4
          );
-         
-         _chars = new StbTrueType.stbtt_packedchar[_paths.Length][];
-         _ascent = new float[_paths.Length];
-         _texture = new __texture[_paths.Length];
 
-         for (int i = 0; i < _paths.Length; i++)
+         _paths.RemoveAll(it => !File.Exists(it.Key));
+
+         foreach (string f in Directory.GetFiles("Resource\\Font"))
+         {
+            if (_paths.Any(p => p.Key.Replace("/", "\\") == f)) continue;
+            if (!f.EndsWith(".ttf") && !f.EndsWith(".otf")) continue;
+            int size = File.Exists($"{f}-size.txt") ? int.Parse(File.ReadAllLines($"{f}-size.txt")[0]) : 20;
+            _paths.Add(new KeyValuePair<string, int>(f, size));
+            Console.WriteLine($"Loaded font: {f}@{size}px");
+         }
+         
+         _chars = new StbTrueType.stbtt_packedchar[_paths.Count][];
+         _ascent = new float[_paths.Count];
+         _texture = new __texture[_paths.Count];
+
+         for (int i = 0; i < _paths.Count; i++)
          {
             int height = _paths[i].Value;
             _chars[i] = new StbTrueType.stbtt_packedchar[256];

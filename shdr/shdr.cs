@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Reflection;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
@@ -6,20 +7,25 @@ using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using shdr.Engine;
 using shdr.Shared;
+using Boolean = System.Boolean;
 
 namespace shdr
 {
    public class __shdr : GameWindow
    {
-      private static int _ticks;
       public static __shdr instance;
       public static __text_box.__data dat;
       public static string path;
-      public static __mesh uMesh;
+      private static __mesh _mesh;
+      public static bool discord;
 
       public __shdr(GameWindowSettings windowSettings, NativeWindowSettings nativeWindowSettings) : base(
          windowSettings, nativeWindowSettings)
       {
+         string exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+         Directory.SetCurrentDirectory(exeDir);
+         Console.WriteLine($"Set working directory to {exeDir}");
+         
          instance = this;
          {
             path = Console.ReadLine();
@@ -52,16 +58,29 @@ namespace shdr
             __render_system.user = new __shader("Resource/Shader/user.vert", "shader1.frag");
             Console.WriteLine(e.Message);
          }
-         uMesh = new __mesh(__mesh.__draw_mode.triangle, null, __vao.__attrib.float2);
-         uMesh.begin();
-         uMesh.quad(
-            uMesh.float2(-1, -1).next(),
-            uMesh.float2(1, -1).next(),
-            uMesh.float2(1, 1).next(),
-            uMesh.float2(-1, 1).next()
+         _mesh = new __mesh(__mesh.__draw_mode.triangle, null, __vao.__attrib.float2);
+         _mesh.begin();
+         _mesh.quad(
+            _mesh.float2(-1, -1).next(),
+            _mesh.float2(1, -1).next(),
+            _mesh.float2(1, 1).next(),
+            _mesh.float2(-1, 1).next()
          );
-         uMesh.end();
-         __discord_rpc.init();
+         _mesh.end();
+         
+         string config = File.Exists("config.txt") ? File.ReadAllText("config.txt") : "1|true";
+
+         string[] split = config.Split('|');
+         __font.index = int.Parse(split[0]);
+         discord = bool.Parse(split[1]);
+         if (discord)
+            __discord_rpc.init();
+
+         Closing += _ =>
+         {
+            File.WriteAllText($"{Directory.GetCurrentDirectory()}/config.txt", $"{__font.index}|{discord}");
+            __discord_rpc.shutdown();
+         };
       }
 
       protected override void OnLoad()
@@ -114,6 +133,18 @@ namespace shdr
          {
             __font.index++;
          }
+         else if (e.Key == Keys.F10)
+         {
+            discord = !discord;
+            if (discord)
+            {
+               __discord_rpc.init();
+            }
+            else
+            {
+               __discord_rpc.shutdown();
+            }
+         }
          
          __text_box.key(ref dat, e.Key, KeyboardState.IsKeyDown(Keys.LeftShift), KeyboardState.IsKeyDown(Keys.LeftControl));
       }
@@ -130,7 +161,7 @@ namespace shdr
          __render_system.user.set_int("_prevFrame", 15);
          __render_system.user.set_vector2("_resolution", Size.ToVector2());
          __render_system.user.set_float("_time", (float)GLFW.GetTime());
-         uMesh.render();
+         _mesh.render();
          
          __render_system.frame.blit(__render_system.prevFrame.handle);
          

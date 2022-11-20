@@ -1,0 +1,2 @@
+﻿16
+this is an example font size file.

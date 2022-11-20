@@ -7,6 +7,8 @@ namespace shdr.Shared
    public static class __discord_rpc
    {
       private static DiscordRPC _client;
+      private static Thread _thread;
+      private static bool _running;
 
       public static void init()
       {
@@ -15,25 +17,27 @@ namespace shdr.Shared
 
          new Thread(() =>
          {
-            unsafe
+            while (_running && __shdr.discord)
             {
-               while (!GLFW.WindowShouldClose(__shdr.instance.WindowPtr))
+               _client.SetPresence(new RichPresence
                {
-                  _client.SetPresence(new RichPresence
+                  Assets = new Assets
                   {
-                     Assets = new Assets
-                     {
-                        LargeImageKey = "cover-image",
-                        LargeImageText = "GLSLand"
-                     },
-                     Details = $"Editing {__shdr.path}",
-                     State = $"Line {__shdr.dat.end.lin}"
-                  });
-                  Thread.Sleep(2000);
-               }
-               _client.Dispose();
+                     LargeImageKey = "cover-image",
+                     LargeImageText = "GLSLand"
+                  },
+                  Details = $"Editing {__shdr.path}",
+                  State = $"Line {__shdr.dat.end.lin + 1}"
+               });
+               Thread.Sleep(2000);
             }
          }).Start();
+      }
+      
+      public static void shutdown()
+      {
+         _running = false;
+         _client.Dispose();
       }
    }
 }

@@ -320,8 +320,9 @@ namespace shdr.Shared
 
          switch (key)
          {
+            case Keys.F5:
             case Keys.S:
-               if (controlDown)
+               if (controlDown || key == Keys.F5)
                {
                   string str = string.Join("\n", dat.text);
                   File.WriteAllText(__shdr.path, str);
@@ -334,7 +335,6 @@ namespace shdr.Shared
                      Console.WriteLine(e);
                   }
                }
-
                break;
             case Keys.Down:
                cursor(ref dat, (0, 1));
