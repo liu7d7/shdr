@@ -2,9 +2,9 @@
   <img width="160px" src="https://raw.githubusercontent.com/pleasegivesource/glsland/master/shdr/code-edit.svg"/>
 </p>
 
-# GLSLand
+# GLSL Editor
 
-GLSLand is a GLSL editor for the desktop written using OpenTK and C#. It's a work in progress, but it's already pretty usable.
+This is a GLSL editor for the desktop written using OpenTK and C#. It's a work in progress, but it's already pretty usable.
 
 ## Features
 

@@ -24,7 +24,7 @@ namespace shdr.Shared
                   Assets = new Assets
                   {
                      LargeImageKey = "cover-image",
-                     LargeImageText = "GLSLand"
+                     LargeImageText = "GLSL Editor"
                   },
                   Details = $"Editing {__shdr.path}",
                   State = $"Line {__shdr.dat.end.lin + 1}"
