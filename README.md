@@ -26,5 +26,5 @@ If it doesn't exist, it will be created and a template will be generated.
 - After you're happy with your code, press `Ctrl+S` or `F5` to compile and run the shader.
 - The code window can be toggled with `F1` .
 - The font can be changed with `F2`.
-    - If you don't like any of the fonts pre-supplied, you may install your own fonts by putting them in the `Resource/Font/` directory.
+    - If you don't like any of the fonts that are pre-supplied, you may install your own fonts by putting them in the `Resource/Font/` directory.
 - DiscordRPC can be toggled with `F10`.
