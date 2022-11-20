@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net6.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="NetDiscordRpc" Version="1.0.2" />
+        <PackageReference Include="OpenTK" Version="4.7.4" />
+        <PackageReference Include="StbImageSharp" Version="2.27.12" />
+        <PackageReference Include="StbTrueTypeSharp" Version="1.26.10" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Remove="Resource\Font\Poppins-SemiBold.ttf" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="Game\Components" />
+        <Folder Include="Resource\Music" />
+    </ItemGroup>
+
+</Project>
