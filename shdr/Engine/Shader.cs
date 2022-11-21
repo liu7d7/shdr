@@ -65,7 +65,7 @@ namespace shdr.Engine
          GL.GetShader(shader, ShaderParameter.CompileStatus, out int code);
          if (code == (int)All.True) return;
          string infoLog = GL.GetShaderInfoLog(shader);
-         throw new Exception($"Error occurred whilst compiling Shader({shader}).\n\n{infoLog}");
+         throw new Exception(infoLog);
       }
 
       private static void link_program(int program)
@@ -75,7 +75,7 @@ namespace shdr.Engine
          GL.GetProgram(program, GetProgramParameterName.LinkStatus, out int code);
          if (code == (int)All.True) return;
          string infoLog = GL.GetProgramInfoLog(program);
-         throw new Exception($"Error occurred whilst linking Program({program}) \n\n{infoLog}");
+         throw new Exception(infoLog);
       }
 
       public void bind()

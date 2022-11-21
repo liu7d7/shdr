@@ -6,6 +6,7 @@ using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using shdr.Engine;
+using TextCopy;
 
 namespace shdr.Shared
 {
@@ -37,6 +38,7 @@ namespace shdr.Shared
          public float scroll = 0f;
          public List<string> text = new();
          public List<string> display = new();
+         public bool typing = false;
 
          public __data()
          {
@@ -66,6 +68,9 @@ namespace shdr.Shared
             "^vec2$",
             "^vec3$",
             "^vec4$",
+            "^mat2$",
+            "^mat3$",
+            "^mat4$",
             "^void$",
             "^layout$",
             "^in$",
@@ -146,8 +151,8 @@ namespace shdr.Shared
                      }
                   }
 
-                  full.Append(works != "" ? _fmt[works](st) : __fmt.norm(st));
-                  full.Append(_operators.Contains(c.ToString()) ? __fmt.op(c.ToString()) : __fmt.norm(c.ToString()));
+                  full.Append(works != "" ? _fmt[works](st) : c == '(' ? __fmt.func(st) : __fmt.norm(st));
+                  full.Append(_operators.Contains(c.ToString()) ? __fmt.op(c.ToString()) : c.ToString());
                   word.Clear();
                   continue;
                }
@@ -181,24 +186,30 @@ namespace shdr.Shared
          return __font.get_width(" ") * e - (e - 1) * 0.4f;
       }
 
+      private static int _scrollSource = 0;
+
       public static void render(ref __data dat, float x, float y, float width, float height)
       {
          float d = MathF.Pow(MathHelper.Clamp((Environment.TickCount - dat.lastUpdate) / 100f, 0, 1), 2f);
          float sline = __util.lerp(dat.prevStart.lin, dat.start.lin, d);
          float scol = __util.lerp(safe(dat.prevStart.col),
-            __font.get_width(dat.text[dat.start.lin][..dat.start.col]), d);
+            safe(dat.start.col), d);
          float eline = __util.lerp(dat.prevEnd.lin, dat.end.lin, d);
          float ecol = __util.lerp(safe(dat.prevEnd.col),
-            __font.get_width(dat.text[dat.end.lin][..dat.end.col]), d);
+            safe(dat.end.col), d);
          float lineHeight = __font.get_height() * 1.6f;
 
-         if (sline < -dat.scroll)
+         if (_scrollSource == 1)
          {
-            dat.scroll = -sline;
-         }
-         if (eline > -dat.scroll + (int)(height - 20) / lineHeight - 1.5f)
-         {
-            dat.scroll = -eline + (int)(height - 20) / lineHeight - 1.5f;
+            if (sline < -dat.scroll)
+            {
+               dat.scroll = -sline;
+            }
+
+            if (eline > -dat.scroll + (int)(height - 20) / lineHeight - 1.5f)
+            {
+               dat.scroll = -eline + (int)(height - 20) / lineHeight - 1.5f;
+            }
          }
          
          uint cyan = (uint)new Color4(0, 238, 255,
@@ -207,13 +218,12 @@ namespace shdr.Shared
          uint hotPink = (uint)new Color4(0xFF, 0x00, 0x94,
             (byte)((Math.Abs(Math.Sin(GLFW.GetTime() % 1.0 * Math.PI)) + 1) * 127)).ToArgb();
          GL.Enable(EnableCap.ScissorTest);
-         GL.Scissor((int)Math.Floor(x), (int)Math.Floor(y), (int)Math.Ceiling(width), (int)Math.Ceiling(height));
+         GL.Scissor((int)Math.Floor(x), __shdr.instance.Size.Y - (int)Math.Floor(y + height), (int)Math.Ceiling(width), (int)Math.Ceiling(height));
          float textOffset = dat.scroll * lineHeight + 15f;
 
-         __util.draw_rect(x, y, width, textOffset + lineHeight * eline, 0xcc202531);
-         __util.draw_rect(x, y + textOffset + lineHeight + lineHeight * eline, width,
-            height + lineHeight * dat.text.Count, 0xcc202531);
-         __util.draw_rect(x, y + textOffset + lineHeight * eline, width, lineHeight, 0xee202531);
+         __util.draw_rect(x, y, width, height, 0xcc202531);
+         if (dat.typing)
+            __util.draw_rect(x, y + textOffset + lineHeight * eline, width, lineHeight, 0xee202531);
 
          __font.bind();
          for (int i = 0; i < dat.display.Count; i++)
@@ -224,8 +234,11 @@ namespace shdr.Shared
 
          __font.render();
 
-         __util.draw_rect(x + 50 + scol + -1, y + textOffset + sline * lineHeight + 2, 2, lineHeight - 4, cyan);
-         __util.draw_rect(x + 50 + ecol - 1, y + textOffset + eline * lineHeight + 2, 2, lineHeight - 4, hotPink);
+         if (dat.typing)
+         {
+            __util.draw_rect(x + 50 + scol + -1, y + textOffset + sline * lineHeight + 2, 2, lineHeight - 4, cyan);
+            __util.draw_rect(x + 50 + ecol - 1, y + textOffset + eline * lineHeight + 2, 2, lineHeight - 4, hotPink);
+         }
 
          GL.Disable(EnableCap.ScissorTest);
       }
@@ -283,11 +296,16 @@ namespace shdr.Shared
 
       public static void wheel(ref __data dat, float scroll)
       {
+         _scrollSource = 2;
          dat.scroll += Math.Sign(scroll);
       }
 
+      private static int _dir = 1;
+
       public static void key(ref __data dat, Keys key, bool shiftDown, bool controlDown)
       {
+         if (!dat.typing) return;
+         
          dat.lastUpdate = Environment.TickCount;
          dat.prevEnd = dat.end;
          dat.prevStart = dat.start;
@@ -297,23 +315,43 @@ namespace shdr.Shared
 
          void cursor(ref __data dat, Vector2i dir)
          {
+            _scrollSource = 1;
             ref __pos one = ref dat.end;
             if (dir.X < 0 || dir.Y < 0)
             {
+               if (_dir == 0)
+                  _dir = -1;
                one = ref dat.start;
             }
 
             ref __pos two = ref dat.end;
             if (dir.X > 0 || dir.Y > 0)
             {
+               if (_dir == 0)
+                  _dir = 1;
                two = ref dat.start;
             }
 
-            one.col += dir.X;
-            one.lin += dir.Y;
-            if (shiftDown) return;
-            two.col = one.col;
-            two.lin = one.lin;
+            if (shiftDown)
+            {
+               if (_dir == -1)
+               {
+                  dat.start.lin += dir.Y;
+                  dat.start.col += dir.X;
+               }
+               else
+               {
+                  dat.end.lin += dir.Y;
+                  dat.end.col += dir.X;
+               }
+            }
+            else
+            {
+               _dir = 0;
+               one.col += dir.X;
+               one.lin += dir.Y;
+               two = one;
+            }
          }
 
          __dir dir = __dir.none;
@@ -324,15 +362,62 @@ namespace shdr.Shared
             case Keys.S:
                if (controlDown || key == Keys.F5)
                {
-                  string str = string.Join("\n", dat.text);
-                  File.WriteAllText(__shdr.path, str);
-                  try
+                  __shdr.reload();
+               }
+               break;
+            case Keys.C:
+               if (controlDown)
+               {
+                  important = true;
+                  if (dat.start.lin == dat.end.lin)
                   {
-                     __render_system.user = new __shader("Resource/Shader/user.vert", __shdr.path);
+                     string str = dat.text[dat.start.lin].Substring(dat.start.col, dat.end.col - dat.start.col);
+                     ClipboardService.SetText(str);
                   }
-                  catch (Exception e)
+                  else
                   {
-                     Console.WriteLine(e);
+                     string str = dat.text[dat.start.lin][dat.start.col..] + "\n";
+                     if (dat.start.lin + 1 != dat.end.lin)
+                     {
+                        for (int i = dat.start.lin + 1; i < dat.end.lin; i++)
+                        {
+                           str += dat.text[i] + "\n";
+                        }
+                     }
+                     str += dat.text[dat.end.lin][..dat.end.col];
+                     ClipboardService.SetText(str);
+                  }
+               }
+               break;
+            case Keys.V:
+               if (controlDown)
+               {
+                  typingHappened = true;
+                  important = true;
+                  string str = ClipboardService.GetText();
+                  if (str != null)
+                  {
+                     // split by newlines
+                     string[] lines = str.Split("\n");
+                     if (lines.Length == 1)
+                     {
+                        // single line
+                        string line = dat.text[dat.start.lin];
+                        dat.text[dat.start.lin] = line[..dat.start.col] + lines[0] + line[dat.end.col..];
+                        dat.end.col += lines[0].Length;
+                        dat.start = dat.end;
+                     }
+                     else
+                     {
+                        // multiple lines
+                        string overflow = dat.text[dat.end.lin][dat.end.col..];
+                        dat.text[dat.start.lin] = dat.text[dat.start.lin][..dat.start.col] + lines[0];
+                        dat.text.InsertRange(dat.start.lin + 1, lines[1..^1]);
+                        dat.end.lin += lines.Length - 1;
+                        dat.text.Insert(dat.end.lin, lines[^1] + overflow);
+                        dat.end.col = lines[^1].Length;
+                        dat.start = dat.end;
+                     }
                   }
                }
                break;
@@ -355,12 +440,27 @@ namespace shdr.Shared
             case Keys.Home:
                if (controlDown)
                {
-                  dat.end.lin = 0;
-                  dat.end.col = 0;
+                  if (_dir == -1)
+                  {
+                     dat.start.lin = 0;
+                     dat.start.col = 0;
+                  }
+                  else
+                  {
+                     dat.end.lin = 0;
+                     dat.end.col = 0;
+                  }
                }
                else
                {
-                  dat.end.col = spaces(dat.text[dat.end.lin]);
+                  if (_dir == -1)
+                  {
+                     dat.start.col = spaces(dat.text[dat.end.lin]);
+                  }
+                  else
+                  {
+                     dat.end.col = spaces(dat.text[dat.start.lin]);
+                  }
                }
 
                if (!shiftDown)
@@ -373,10 +473,17 @@ namespace shdr.Shared
             case Keys.End:
                if (controlDown)
                {
-                  dat.end.lin = dat.text.Count - 1;
+                  if (_dir == -1)
+                     dat.start.lin = dat.text.Count - 1;
+                  else
+                     dat.end.lin = dat.text.Count - 1;
                }
 
-               dat.end.col = dat.text[dat.end.lin].Length;
+               if (_dir == -1)
+                  dat.start.col = dat.text[dat.end.lin].Length;
+               else
+                  dat.end.col = dat.text[dat.end.lin].Length;
+               
                if (!shiftDown)
                {
                   dat.start.col = dat.end.col;
@@ -489,6 +596,8 @@ namespace shdr.Shared
 
       public static void type(ref __data dat, string str)
       {
+         if (!dat.typing) return;
+         
          dat.lastUpdate = Environment.TickCount;
          dat.prevEnd = dat.end;
          dat.prevStart = dat.start;
