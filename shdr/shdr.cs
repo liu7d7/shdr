@@ -82,6 +82,13 @@ namespace shdr
          };
       }
 
+      protected override void OnMouseDown(MouseButtonEventArgs e)
+      {
+         base.OnMouseDown(e);
+         
+         __text_box.click(ref dat, MouseState.X, MouseState.Y, 10, 10, KeyboardState.IsKeyDown(Keys.LeftShift));
+      }
+
       public static void reload()
       {
          string str = string.Join("\n", dat.text);

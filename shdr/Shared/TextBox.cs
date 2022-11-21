@@ -114,6 +114,59 @@ namespace shdr.Shared
             "(", ")", "{", "}", "[", "]", "+", "-", "*", "/", "%", "=", "!", "<", ">", "&", "|", "^", "~", "?", ":", "\\", "\"", "'", "`", ";"
          };
       }
+
+      public static __pos pos_at(__data dat, float mouseX, float mouseY, float x, float y)
+      {
+         float lineHeight = __font.get_height() * 1.6f;
+         float textOffset = dat.scroll * lineHeight + 15f;
+         __pos pos;
+         int lin = (int)((mouseY - y - textOffset) / lineHeight);
+         int col = 0;
+         mouseX += safe(1) / 2f;
+         for (int i = 0; i <= dat.text[lin].Length; i++)
+         {
+            if (safe(i) < mouseX - x - 50)
+            {
+               col = i;
+            }
+            else
+            {
+               break;
+            }
+         }
+         pos.lin = lin;
+         pos.col = col;
+         return pos;
+      }
+
+      public static void click(ref __data dat, float mouseX, float mouseY, float x, float y, bool shiftDown)
+      {
+         __pos pos = pos_at(dat, mouseX, mouseY, x, y);
+         if (shiftDown)
+         {
+            ref __pos notSelected = ref dat.start;
+            ref __pos selected = ref dat.end;
+            if (_dir == -1)
+            {
+               notSelected = ref dat.end;
+               selected = ref dat.start;
+            }
+            _dir = pos.lin < selected.lin || (pos.lin == selected.lin && pos.col < selected.col) ? -1 : 1;
+            if (_dir == -1)
+            {
+               selected = pos;
+            }
+            else
+            {
+               selected = pos;
+            }
+         }
+         else
+         {
+            _dir = 0;
+            dat.start = dat.end = pos;
+         }
+      }
       
       public static void update(ref __data dat, bool firstRun = false)
       {
@@ -186,7 +239,7 @@ namespace shdr.Shared
          return __font.get_width(" ") * e - (e - 1) * 0.4f;
       }
 
-      private static int _scrollSource = 0;
+      private static int _scrollSource;
 
       public static void render(ref __data dat, float x, float y, float width, float height)
       {
@@ -236,8 +289,8 @@ namespace shdr.Shared
 
          if (dat.typing)
          {
-            __util.draw_rect(x + 50 + scol + -1, y + textOffset + sline * lineHeight + 2, 2, lineHeight - 4, cyan);
-            __util.draw_rect(x + 50 + ecol - 1, y + textOffset + eline * lineHeight + 2, 2, lineHeight - 4, hotPink);
+            __util.draw_rect(x + 50 + scol - 1, y + textOffset + sline * lineHeight, 2, lineHeight, hotPink);
+            __util.draw_rect(x + 50 + ecol - 1, y + textOffset + eline * lineHeight, 2, lineHeight, hotPink);
          }
 
          GL.Disable(EnableCap.ScissorTest);
@@ -316,8 +369,10 @@ namespace shdr.Shared
          void cursor(ref __data dat, Vector2i dir)
          {
             _scrollSource = 1;
+            if (!shiftDown)
+               _dir = 0;
             ref __pos one = ref dat.end;
-            if (dir.X < 0 || dir.Y < 0)
+            if (dir.X < 0 || dir.Y < 0 || _dir == -1)
             {
                if (_dir == 0)
                   _dir = -1;
@@ -325,7 +380,7 @@ namespace shdr.Shared
             }
 
             ref __pos two = ref dat.end;
-            if (dir.X > 0 || dir.Y > 0)
+            if (dir.X > 0 || dir.Y > 0 || _dir == 1)
             {
                if (_dir == 0)
                   _dir = 1;
@@ -351,6 +406,11 @@ namespace shdr.Shared
                one.col += dir.X;
                one.lin += dir.Y;
                two = one;
+            }
+
+            if (dat.start == dat.end)
+            {
+               _dir = 0;
             }
          }
 
